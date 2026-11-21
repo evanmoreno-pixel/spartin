@@ -6,9 +6,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: '127.0.0.1',
-    port: 5173,
+    port: Number(process.env.SPARTIN_WEB_PORT ?? 5173),
     strictPort: true,
-    proxy: { '/api': `http://127.0.0.1:${process.env.PORT ?? 3000}` },
+    proxy: {
+      '/api': { target: `http://127.0.0.1:${process.env.PORT ?? 3000}`, changeOrigin: false },
+    },
   },
   build: { outDir: '../dist/client', emptyOutDir: true },
 })

@@ -7,6 +7,19 @@ import { HttpError } from './httpError.js'
 
 const cookieOptions: CookieOptions = { httpOnly: true, sameSite: 'strict', path: '/api' }
 const parseJson = json({ limit: '48kb' })
+const readMethods = new Set(['GET', 'HEAD', 'OPTIONS'])
+
+const requireSameOriginForWrites: RequestHandler = (req, _res, next) => {
+  const source = req.get('origin')
+  const site = req.get('sec-fetch-site')
+  if (!readMethods.has(req.method) && (
+    (source && source !== `${req.protocol}://${req.get('host')}`)
+    || site === 'cross-site' || site === 'same-site'
+  )) {
+    throw new HttpError(403, 'ORIGIN_NOT_ALLOWED', 'Open SpartIN directly to perform this action.')
+  }
+  next()
+}
 
 function getToken(req: Request) {
   return /(?:^|;\s*)spartin_demo_session=([\w-]{43})(?:;|$)/.exec(req.get('cookie') ?? '')?.[1]
@@ -57,6 +70,7 @@ export function createApi(sessions: DemoSessions, events: EventService, particip
     res.set('Cache-Control', 'no-store')
     next()
   })
+  api.use(requireSameOriginForWrites)
 
   api.get('/demo-accounts', (_req, res) => {
     res.json({ data: sessions.accounts() })

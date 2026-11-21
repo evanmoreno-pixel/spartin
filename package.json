@@ -11,7 +11,8 @@
     "build": "tsc -p backend/tsconfig.json && tsc -p frontend/tsconfig.json && vite build",
     "start": "node dist/server/backend/src/index.js",
     "test": "vitest run",
-    "test:e2e": "npm run build && playwright test"
+    "test:e2e": "npm run build && playwright test",
+    "test:load": "npm run build && node scripts/load-test.mjs"
   },
   "dependencies": {
     "express": "^5.1.0",
@@ -22,6 +23,7 @@
     "react-router-dom": "^7.6.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
     "@playwright/test": "^1.51.0",
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.3.0",
@@ -34,11 +36,12 @@
     "@types/supertest": "^6.0.0",
     "@vitejs/plugin-react": "^5.0.0",
     "concurrently": "^9.1.0",
+    "ical.js": "^2.2.1",
     "jsdom": "^26.1.0",
     "supertest": "^7.1.0",
     "tsx": "^4.19.0",
     "typescript": "~5.9.0",
     "vite": "^7.0.0",
-    "vitest": "^3.2.0"
+    "vitest": "^5.1.1"
   }
 }

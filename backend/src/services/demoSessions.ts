@@ -1,19 +1,25 @@
 import { randomBytes } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
+import type { DemoAccount, User } from '../../../shared/contracts.js'
 import { HttpError, objectBody } from '../api/httpError.js'
 import { findUser } from '../data/database.js'
 import { demoAccounts } from '../data/demoSeeds.js'
 
 export const sessionCookie = 'spartin_demo_session'
 export const sessionLifetimeMs = 8 * 60 * 60 * 1000
+export type DemoDirectory = readonly (DemoAccount & Pick<User, 'userId'>)[]
 
 export class DemoSessions {
   private readonly sessions = new Map<string, { userId: string; expiresAt: number }>()
 
-  constructor(private readonly db: DatabaseSync, private readonly now: () => number = Date.now) {}
+  constructor(
+    private readonly db: DatabaseSync,
+    private readonly now: () => number = Date.now,
+    private readonly directory: DemoDirectory = demoAccounts,
+  ) {}
 
   accounts() {
-    return demoAccounts.map(({ accountKey, displayName, role }) => ({ accountKey, displayName, role }))
+    return this.directory.map(({ accountKey, displayName, role }) => ({ accountKey, displayName, role }))
   }
 
   user(token: string | undefined) {
@@ -29,7 +35,7 @@ export class DemoSessions {
 
   signIn(body: unknown, existingToken?: string) {
     const input = objectBody(body)
-    const account = demoAccounts.find(item => item.accountKey === input.accountKey)
+    const account = this.directory.find(item => item.accountKey === input.accountKey)
     if (Object.keys(input).length !== 1 || !account) {
       throw new HttpError(400, 'INVALID_DEMO_ACCOUNT', 'Choose a predefined demo account.')
     }

@@ -5,11 +5,15 @@ import { HttpError } from './api/httpError.js'
 import { createApi } from './api/routes.js'
 import { EventRepository } from './data/eventRepository.js'
 import { ParticipationRepository } from './data/participationRepository.js'
-import { DemoSessions } from './services/demoSessions.js'
+import { DemoSessions, type DemoDirectory } from './services/demoSessions.js'
 import { EventService } from './services/eventService.js'
 import { ParticipationService } from './services/participationService.js'
 
-export function createApp(db: DatabaseSync, options: { clientDirectory?: string; sessionClock?: () => number } = {}) {
+export function createApp(db: DatabaseSync, options: {
+  clientDirectory?: string
+  sessionClock?: () => number
+  demoDirectory?: DemoDirectory
+} = {}) {
   const app = express()
   app.disable('x-powered-by')
   app.use((_req, res, next) => {
@@ -18,7 +22,11 @@ export function createApp(db: DatabaseSync, options: { clientDirectory?: string;
   })
   const events = new EventRepository(db)
   const participation = new ParticipationService(events, new ParticipationRepository(db))
-  app.use('/api', createApi(new DemoSessions(db, options.sessionClock), new EventService(events, participation), participation))
+  app.use('/api', createApi(
+    new DemoSessions(db, options.sessionClock, options.demoDirectory),
+    new EventService(events, participation),
+    participation,
+  ))
 
   const { clientDirectory } = options
   if (clientDirectory) {
@@ -47,7 +55,7 @@ export function createApp(db: DatabaseSync, options: { clientDirectory?: string;
       res.status(error.status).json({ error: { code: 'INVALID_REQUEST', message: 'The request could not be read. Check the URL and JSON body.' } })
       return
     }
-    console.error(new Date().toISOString(), req.method, req.path, error instanceof Error ? error.message : 'Unknown error')
+    console.error(new Date().toISOString(), req.method, 'UNHANDLED_REQUEST_ERROR')
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'SpartIN could not complete the request. Please try again.' } })
   }
   app.use(handleError)

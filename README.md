@@ -4,7 +4,7 @@ SpartIN is the CMPE 131 campus events web app for San José State University tra
 
 ## Run locally
 
-Use Node.js 24.12 or later and npm. From the project root, run:
+Use Node.js 24 LTS (24.12 or later) and npm. From the project root, run:
 
 ```sh
 npm ci
@@ -19,6 +19,14 @@ npm start
 ```
 
 SQLite creates `backend/data/spartin.sqlite` on first launch and applies pending schema migrations at startup. Existing files upgrade in place. Event and participation changes persist after restart. Set `SPARTIN_DB` to use a different file, or set `PORT` to change the API port.
+
+If the default ports are occupied, set `SPARTIN_WEB_PORT` for Vite and `PORT` for the API before running `npm run dev`. For example, in PowerShell:
+
+```powershell
+$env:SPARTIN_WEB_PORT = '5184'
+$env:PORT = '3423'
+npm run dev
+```
 
 ## Demo accounts
 
@@ -50,8 +58,11 @@ Leaflet displays street tiles from OpenStreetMap with visible attribution. If ti
 npm test
 npx playwright install chromium
 npm run test:e2e
+npm run test:load
 ```
 
-The browser suite builds the app, runs the real API against temporary SQLite files, and exercises mouse, keyboard, Chromium touch input, and the Phase 3 integrations. To use an installed Microsoft Edge browser, set `SPARTIN_BROWSER_CHANNEL=msedge` in your shell before running `npm run test:e2e`.
+The browser suite builds the app, runs the real API against temporary SQLite files, and exercises the full release workflow and targeted accessibility checks. To use an installed Microsoft Edge browser, set `SPARTIN_BROWSER_CHANNEL=msedge` before running `npm run test:e2e`. The load test starts its own loopback server with synthetic accounts and a disposable database.
 
-See the [Phase 3 implementation notes](docs/PHASE-3.md) for provider policy, coordinates, privacy, and browser verification. The [Phase 2 notes](docs/PHASE-2.md) and [Phase 1 notes](docs/PHASE-1.md) record the earlier deliveries and API contracts.
+## Release evidence
+
+See the [Phase 4 summary](docs/PHASE-4.md), [release checklist](docs/RELEASE-CHECKLIST.md), and [final test report](docs/FINAL-TEST-REPORT.md). The earlier delivery records are in [Phase 1](docs/PHASE-1.md), [Phase 2](docs/PHASE-2.md), and [Phase 3](docs/PHASE-3.md).
