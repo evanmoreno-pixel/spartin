@@ -1,3 +1,5 @@
+import type { Coordinates } from './coordinates.js'
+
 export type Role = 'organizer' | 'participant'
 export type EventStatus = 'scheduled' | 'postponed'
 export type ParticipationStatus = 'joined' | 'waitlisted' | 'passed' | 'left'
@@ -30,6 +32,7 @@ export interface EventFields {
   startTime: string
   endTime: string
   location: string
+  coordinates: Coordinates | null
   capacity: number | null
   waitlistEnabled: boolean
   status: EventStatus

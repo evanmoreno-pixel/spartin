@@ -2,6 +2,7 @@ import { json, Router, type CookieOptions, type Request, type RequestHandler } f
 import type { User } from '../../../shared/contracts.js'
 import { DemoSessions, sessionCookie, sessionLifetimeMs } from '../services/demoSessions.js'
 import { EventService } from '../services/eventService.js'
+import { ParticipationService } from '../services/participationService.js'
 import { HttpError } from './httpError.js'
 
 const cookieOptions: CookieOptions = { httpOnly: true, sameSite: 'strict', path: '/api' }
@@ -28,7 +29,7 @@ function pageNumber(req: Request) {
   return Number(page)
 }
 
-export function createApi(sessions: DemoSessions, events: EventService) {
+export function createApi(sessions: DemoSessions, events: EventService, participation: ParticipationService) {
   const api = Router()
 
   const requireSession: RequestHandler = (req, res, next) => {
@@ -41,6 +42,13 @@ export function createApi(sessions: DemoSessions, events: EventService) {
   const requireOrganizer: RequestHandler = (_req, res, next) => {
     if (res.locals.user.role !== 'organizer') {
       throw new HttpError(403, 'ORGANIZER_REQUIRED', 'This action requires an organizer account.')
+    }
+    next()
+  }
+
+  const requireParticipant: RequestHandler = (_req, res, next) => {
+    if (res.locals.user.role !== 'participant') {
+      throw new HttpError(403, 'PARTICIPANT_REQUIRED', 'This action requires a participant account.')
     }
     next()
   }
@@ -73,9 +81,31 @@ export function createApi(sessions: DemoSessions, events: EventService) {
     res.json(events.list(pageNumber(req)))
   })
 
-  api.get('/events/:id', requireSession, (req, res) => {
-    res.json({ data: events.get(eventId(req), res.locals.user as User) })
+  api.get('/events/discovery', requireSession, requireParticipant, (req, res) => {
+    res.json(events.list(pageNumber(req), undefined, res.locals.user.userId))
   })
+
+  api.get('/events/:id', requireSession, (req, res) => {
+    const user = res.locals.user as User
+    const event = events.get(eventId(req), user)
+    res.json({ data: user.role === 'participant'
+      ? participation.forEvent(event, user.userId)
+      : event })
+  })
+
+  api.get('/me/participation', requireSession, requireParticipant, (req, res) => {
+    res.json(participation.list(res.locals.user.userId, pageNumber(req)))
+  })
+
+  api.get('/events/:id/participation', requireSession, requireParticipant, (req, res) => {
+    res.json({ data: participation.get(eventId(req), res.locals.user.userId) })
+  })
+
+  for (const action of ['join', 'pass', 'leave'] as const) {
+    api.post(`/events/:id/${action}`, requireSession, requireParticipant, (req, res) => {
+      res.json({ data: participation.act(action, eventId(req), res.locals.user.userId) })
+    })
+  }
 
   api.get('/organizer/events', requireSession, requireOrganizer, (req, res) => {
     res.json(events.list(pageNumber(req), res.locals.user.userId))

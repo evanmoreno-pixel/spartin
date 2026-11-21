@@ -16,9 +16,13 @@ const event: CampusEvent = {
   title: 'Transfer Coffee Meetup',
   description: 'Meet other transfer students over coffee.',
   location: 'Student Union',
+  coordinates: null,
   startTime: '2099-04-01T17:00:00.000Z',
   endTime: '2099-04-01T18:30:00.000Z',
   capacity: 24,
+  waitlistEnabled: false,
+  joinedCount: 0,
+  waitlistedCount: 0,
   status: 'scheduled',
   createdAt: '2099-03-01T18:00:00.000Z',
   updatedAt: '2099-03-01T18:00:00.000Z',
@@ -35,7 +39,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-it('opens the participant catalog through a labeled demo selection and displays read-only event details', async () => {
+it('opens the participant catalog through a labeled demo selection and displays details without organizer controls', async () => {
   const fetch = vi.fn(async (path: string, options: RequestInit) => {
     if (path === '/api/session' && options.method === 'POST') {
       expect(JSON.parse(String(options.body))).toEqual({ accountKey: 'participant-1' })
@@ -45,8 +49,10 @@ it('opens the participant catalog through a labeled demo selection and displays 
     if (path === '/api/demo-accounts') {
       return json({ data: [{ accountKey: 'participant-1', displayName: participant.displayName, role: participant.role }] })
     }
-    if (path === '/api/events?page=1') return json({ data: [event], pagination: { page: 1, hasNext: false } })
-    if (path === '/api/events/transfer-coffee') return json({ data: event })
+    if (path === '/api/events?page=1' || path === '/api/events/discovery') {
+      return json({ data: [event], pagination: { page: 1, hasNext: false } })
+    }
+    if (path === '/api/events/transfer-coffee') return json({ data: { ...event, participation: { status: null, waitlistPosition: null } } })
     throw new Error(`Unexpected request to ${path}`)
   })
   vi.stubGlobal('fetch', fetch)
@@ -56,13 +62,16 @@ it('opens the participant catalog through a labeled demo selection and displays 
   expect(await screen.findByText('Simulated authentication')).toBeVisible()
   await user.click(await screen.findByRole('button', { name: /Participant 1/ }))
   expect(await screen.findByRole('heading', { name: 'Explore campus events' })).toBeVisible()
+  await user.click(screen.getByRole('link', { name: 'Browse all' }))
   await user.click(await screen.findByRole('link', { name: /view details for Transfer Coffee Meetup/i }))
   expect(await screen.findByRole('heading', { name: event.title })).toBeVisible()
   expect(screen.getByText(event.description)).toBeVisible()
   expect(screen.getByText(event.location)).toBeVisible()
   expect(screen.getByText(event.organizerDisplayName)).toBeVisible()
   expect(screen.getByText('24')).toBeVisible()
-  expect(screen.queryByRole('button', { name: /delete|join|pass/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Join' })).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Pass' })).toBeVisible()
   expect(screen.queryByRole('link', { name: /edit|create/i })).not.toBeInTheDocument()
 })
 

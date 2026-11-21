@@ -1,4 +1,4 @@
-import type { CampusEvent, DemoAccount, EventFields, User } from '../../shared/contracts'
+import type { CampusEvent, DemoAccount, EventFields, ParticipationAction, ParticipationResult, User } from '../../shared/contracts'
 
 export const sessionEnded = 'spartin:session-ended'
 
@@ -46,6 +46,20 @@ export function signOut() {
 
 export function listEvents(organizer: boolean, page: number, signal?: AbortSignal) {
   return request<EventPage>(`${organizer ? '/organizer/events' : '/events'}?page=${page}`, { signal })
+}
+
+export function listDiscovery(signal: AbortSignal) {
+  return request<EventPage>('/events/discovery', { signal })
+}
+
+export function listParticipation(page: number, signal: AbortSignal) {
+  return request<EventPage>(`/me/participation?page=${page}`, { signal })
+}
+
+export async function actOnEvent(eventId: string, action: ParticipationAction) {
+  return (await request<{ data: ParticipationResult }>(`/events/${encodeURIComponent(eventId)}/${action}`, {
+    method: 'POST',
+  })).data
 }
 
 export async function getEvent(id: string, signal?: AbortSignal) {

@@ -3,7 +3,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import type { CampusEvent, User } from '../../shared/contracts'
 import { ApiError, deleteEvent, errorMessage, getEvent } from './api'
+import { CalendarActions } from './CalendarActions'
 import { eventDateTime } from './dates'
+import { EventLocationPreview } from './EventLocations'
+import { DetailParticipation } from './Participation'
+import { ShareActions } from './ShareActions'
 import { EmptyState, EventStatus, LoadError, Loading, Notice } from './ui'
 import { useResource } from './useResource'
 
@@ -56,13 +60,14 @@ export function EventDetailPage({ organizer, user }: { organizer: boolean; user:
   const navigate = useNavigate()
   const notice = useLocation().state?.notice as string | undefined
   const event = resource.data
-  const home = organizer ? '/organizer' : '/participant'
+  const participant = user.role === 'participant'
+  const home = participant ? '/participant/browse' : '/organizer'
   const unavailable = (resource.error instanceof ApiError && resource.error.status === 404)
     || (organizer && event && event.organizerId !== user.userId)
 
   return (
     <div className="detail-layout">
-      <Link className="back-link" to={home}>{organizer ? 'Back to My events' : 'Back to Available events'}</Link>
+      <Link className="back-link" to={home}>{participant ? 'Back to Available events' : 'Back to My events'}</Link>
       {resource.pending && <Loading label="Loading event details…" />}
       {unavailable && (
         <EmptyState title="Event unavailable">
@@ -93,11 +98,28 @@ export function EventDetailPage({ organizer, user }: { organizer: boolean; user:
               <div><dt><MapPin size={17} aria-hidden="true" /> Location</dt><dd>{event.location}</dd></div>
               <div><dt><UsersRound size={17} aria-hidden="true" /> Participant capacity</dt><dd>{event.capacity ?? 'No capacity limit'}</dd></div>
               <div><dt><UserRound size={17} aria-hidden="true" /> Organizer</dt><dd>{event.organizerDisplayName}</dd></div>
+              {organizer && (
+                <>
+                  <div><dt>Joined</dt><dd>{event.joinedCount}</dd></div>
+                  <div><dt>Waitlisted</dt><dd>{event.waitlistedCount}</dd></div>
+                  <div><dt>Waitlist enrollment</dt><dd>{event.waitlistEnabled ? 'Enabled' : 'Closed'}</dd></div>
+                </>
+              )}
             </dl>
             <section className="event-description">
               <h2>About this event</h2>
               <p>{event.description || 'No description provided.'}</p>
             </section>
+            {participant && event.participation && (
+              <DetailParticipation key={event.eventId} event={event} refreshing={resource.refreshing} refresh={resource.refresh} />
+            )}
+            {participant && (
+              <>
+                <EventLocationPreview event={event} />
+                <ShareActions key={`share-${event.eventId}`} eventId={event.eventId} title={event.title} />
+                <CalendarActions key={`calendar-${event.eventId}`} event={event} />
+              </>
+            )}
           </article>
           {deleting && <DeleteDialog event={event} onClose={() => setDeleting(false)} onDeleted={() => navigate(home, { replace: true, state: { notice: 'Event deleted.' } })} />}
         </>

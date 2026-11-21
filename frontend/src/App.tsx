@@ -6,6 +6,9 @@ import { ApiError, errorMessage, listAccounts, session, sessionEnded, signIn, si
 import { EventDashboard } from './EventDashboard'
 import { EventDetailPage } from './EventDetail'
 import { EventEditor } from './EventEditor'
+import { ParticipantMapPage } from './EventLocations'
+import { MyEvents } from './MyEvents'
+import { ParticipantDiscovery, ParticipantLayout } from './ParticipantDiscovery'
 import { Brand, LoadError, Loading, Notice } from './ui'
 import { useResource } from './useResource'
 
@@ -131,6 +134,11 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={user ? <Navigate to={homeFor(user.role)} replace /> : <DemoLogin onSignIn={setAccount} />} />
+      <Route path="events/:id" element={user
+        ? <Shell user={user} onSignOut={() => setAccount(null)} />
+        : <DemoLogin onSignIn={setAccount} />}>
+        {user && <Route index element={<EventDetailPage user={user} organizer={false} />} />}
+      </Route>
       {user && (
         <Route element={<Shell user={user} onSignOut={() => setAccount(null)} />}>
           <Route path="organizer" element={<RoleRoute user={user} role="organizer" />}>
@@ -140,7 +148,12 @@ export function App() {
             <Route path="events/:id/edit" element={<EventEditor user={user} />} />
           </Route>
           <Route path="participant" element={<RoleRoute user={user} role="participant" />}>
-            <Route index element={<EventDashboard organizer={false} />} />
+            <Route element={<ParticipantLayout />}>
+              <Route index element={<ParticipantDiscovery />} />
+              <Route path="browse" element={<EventDashboard organizer={false} />} />
+              <Route path="my-events" element={<MyEvents />} />
+              <Route path="map" element={<ParticipantMapPage />} />
+            </Route>
             <Route path="events/:id" element={<EventDetailPage user={user} organizer={false} />} />
           </Route>
         </Route>

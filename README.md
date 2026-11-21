@@ -1,6 +1,6 @@
 # SpartIN
 
-SpartIN is the CMPE 131 campus events web app for San José State University transfer students. Phase 1 implements **FR-02** organizer event management and the browsing portion of **FR-03**.
+SpartIN is the CMPE 131 campus events web app for San José State University transfer students. Phase 3 adds event maps and directions (**FR-04**), shareable event links (**FR-05**), opt-in location (**FR-06**), and calendar export (**FR-08**). Organizers can manage events (**FR-02**) and participants can browse, swipe, join, pass, and leave events with FIFO waitlisting (**FR-01**, **FR-03**, **FR-07**).
 
 ## Run locally
 
@@ -18,16 +18,31 @@ npm run build
 npm start
 ```
 
-SQLite creates `backend/data/spartin.sqlite` on first launch and applies the schema and demo seeds once. Event changes persist after restart. Set `SPARTIN_DB` to use a different file, or set `PORT` to change the API port.
+SQLite creates `backend/data/spartin.sqlite` on first launch and applies pending schema migrations at startup. Existing files upgrade in place. Event and participation changes persist after restart. Set `SPARTIN_DB` to use a different file, or set `PORT` to change the API port.
 
 ## Demo accounts
 
 **Authentication is simulated and unsuitable for production deployment.** The app listens on the local loopback interface. Anyone with access to the demo can choose any of its predefined accounts. The server issues an opaque session cookie and resolves the role from the stored user record on each protected request. Sessions expire after eight hours or when the server restarts.
 
-- **Organizer 1** and **Organizer 2** can create, view, edit, reschedule, postpone, and delete their own events. Use **Edit or reschedule** to change the dates, or set the status to **Postponed** to hide the event until it is scheduled again.
-- **Participant 1** can browse and open scheduled events that have yet to end. The catalog and open details refresh when the tab becomes active and every 15 seconds while visible. The catalog also has a **Refresh** button.
+- **Organizer 1** and **Organizer 2** can manage their own events, set capacity, and enable waitlist enrollment. The event detail view shows the number joined and waitlisted.
+- **Participant 1**, **Participant 2**, and **Participant 3** can use **Discover**, **Browse all**, **Map**, and **My events**. Drag or swipe right to join and left to pass. The focused deck also accepts the right and left arrow keys. Buttons provide the same actions. Use **My events** to review enrollment, see waitlist position, or leave.
 
-To demonstrate the complete workflow, create a future event as Organizer 1, switch to Participant 1 to see it, then return to Organizer 1 to edit or delete it. The two roles can also stay signed in simultaneously in independent browser profiles or a regular and private window.
+## Demonstrate maps, sharing, and calendar
+
+1. Sign in as **Participant 1** and choose **Map**. Select **Library Study Jam** on its pin to see the event summary, then open **View event details**. **Directions** opens Google Maps. If the original demo events have ended, create a future event at the **Dr. Martin Luther King, Jr. Library** or enter verified coordinates under **Map pin (optional)**.
+2. On **Map**, select **Use my location**, then grant or deny the browser request. **Stop using my location** removes its marker. Location requires a secure context such as HTTPS or loopback. A plain HTTP LAN address on a phone may be unable to request it.
+3. On event details, use **Share event** or **Copy link**. If automatic access is unavailable, copy from the displayed link field. A recipient who can reach the same origin can open the corresponding event after selecting a demo account. A loopback link is local to the device serving the application.
+4. Select **Add to Google Calendar** and review the draft before saving, or select **Download calendar file** and import the `.ics` into a compatible calendar.
+
+Leaflet displays street tiles from OpenStreetMap with visible attribution. If tiles are unavailable or paused while your location is displayed, event pins and the text location list remain available. The app keeps your location in browser memory and clears it when you stop using location or leave the map.
+
+## Demonstrate a waitlist
+
+1. As **Organizer 1**, create an upcoming event with capacity **1** and select **Allow waitlist enrollment when full**.
+2. Switch to **Participant 1**, find the event in **Browse all**, open its details, and select **Join**.
+3. Switch to **Participant 2**, open the same event, and select **Join waitlist**. Under **My events**, confirm position **1**.
+4. Repeat with **Participant 3** and confirm position **2**.
+5. Switch back to **Participant 1**. In **My events**, select **Leave event**. Participant 2 now shows **Joined** and Participant 3 moves to position **1**. Use separate browser profiles to keep the demo accounts signed in simultaneously.
 
 ## Test
 
@@ -37,6 +52,6 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-The browser test builds the app, runs the real API against a temporary SQLite file, and checks the organizer and participant workflows at desktop and mobile viewport sizes. To use an installed Microsoft Edge browser, set `SPARTIN_BROWSER_CHANNEL=msedge` in your shell before running `npm run test:e2e`.
+The browser suite builds the app, runs the real API against temporary SQLite files, and exercises mouse, keyboard, Chromium touch input, and the Phase 3 integrations. To use an installed Microsoft Edge browser, set `SPARTIN_BROWSER_CHANNEL=msedge` in your shell before running `npm run test:e2e`.
 
-See the [Phase 1 implementation notes](docs/PHASE-1.md) for the API contract, specification decisions, and requirements traceability.
+See the [Phase 3 implementation notes](docs/PHASE-3.md) for provider policy, coordinates, privacy, and browser verification. The [Phase 2 notes](docs/PHASE-2.md) and [Phase 1 notes](docs/PHASE-1.md) record the earlier deliveries and API contracts.

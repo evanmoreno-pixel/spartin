@@ -4,12 +4,17 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import type { CampusEvent } from '../../shared/contracts'
 import { listEvents } from './api'
 import { eventDateLabel, eventTimeLabel } from './dates'
+import { participationLabel } from './Participation'
 import { capacityText, EmptyState, EventStatus, LoadError, Loading, Notice } from './ui'
 import { useResource } from './useResource'
 
-function EventCard({ event, organizer }: { event: CampusEvent; organizer: boolean }) {
+export function EventCard({ event, organizer, discovery = false }: { event: CampusEvent; organizer: boolean; discovery?: boolean }) {
   const date = eventDateLabel(event.startTime)
   const href = `/${organizer ? 'organizer' : 'participant'}/events/${event.eventId}`
+  const remaining = event.capacity === null ? null : Math.max(0, event.capacity - event.joinedCount)
+  const capacity = !discovery || remaining === null ? capacityText(event.capacity)
+    : remaining === 0 ? (event.waitlistEnabled ? 'Full · waitlist open' : 'Full')
+    : `${remaining} ${remaining === 1 ? 'spot' : 'spots'} available`
 
   return (
     <article className="event-card">
@@ -25,7 +30,8 @@ function EventCard({ event, organizer }: { event: CampusEvent; organizer: boolea
         <ul className="card-meta">
           <li><Clock3 size={16} aria-hidden="true" /><time dateTime={event.startTime}>{date.weekday}, {date.month} {date.day} · {eventTimeLabel(event.startTime)}</time></li>
           <li><MapPin size={16} aria-hidden="true" />{event.location}</li>
-          <li><UsersRound size={16} aria-hidden="true" />{capacityText(event.capacity)}</li>
+          <li><UsersRound size={16} aria-hidden="true" />{capacity}</li>
+          {discovery && event.participation?.status && <li>{participationLabel(event.participation)}</li>}
         </ul>
       </div>
       <div className="card-footer">
@@ -51,14 +57,14 @@ export function EventDashboard({ organizer }: { organizer: boolean }) {
 
   return (
     <>
-      <section className="dashboard-hero">
+      {organizer && <section className="dashboard-hero">
         <div className="hero-copy">
-          <p><CalendarDays size={17} aria-hidden="true" /> {organizer ? 'Organizer dashboard' : 'Participant dashboard'}</p>
-          <h1>{organizer ? 'Your campus events' : 'Explore campus events'}</h1>
-          <div>{organizer ? 'Create meetups and manage the events you host.' : 'Find upcoming meetups at San José State University.'}</div>
+          <p><CalendarDays size={17} aria-hidden="true" /> Organizer dashboard</p>
+          <h1>Your campus events</h1>
+          <div>Create meetups and manage the events you host.</div>
         </div>
-        {organizer && <div className="hero-action">{createLink}</div>}
-      </section>
+        <div className="hero-action">{createLink}</div>
+      </section>}
       {notice && <Notice>{notice}</Notice>}
       <section aria-labelledby="events-heading" className="events-section">
         <div className="section-heading">

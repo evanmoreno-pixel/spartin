@@ -58,6 +58,13 @@ const migrations = [
 
     CREATE TABLE demo_seed_history (name TEXT PRIMARY KEY) STRICT;
   `),
+  (db: DatabaseSync) => db.exec(`
+    ALTER TABLE events ADD COLUMN latitude REAL CHECK (latitude BETWEEN -90 AND 90);
+    ALTER TABLE events ADD COLUMN longitude REAL CHECK (
+      (latitude IS NULL AND longitude IS NULL)
+      OR (latitude IS NOT NULL AND longitude IS NOT NULL AND longitude BETWEEN -180 AND 180)
+    );
+  `),
 ]
 
 export function transaction<T>(db: DatabaseSync, work: () => T): T {

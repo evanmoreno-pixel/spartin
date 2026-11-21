@@ -2,6 +2,7 @@ import { CalendarDays, MapPin } from 'lucide-react'
 import { useCallback, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { CampusEvent, EventStatus, User } from '../../shared/contracts'
+import { validLatitude, validLongitude } from '../../shared/coordinates'
 import { ApiError, errorMessage, getEvent, saveEvent } from './api'
 import { inputToTimestamp, localInputValue, localZone } from './dates'
 import { EmptyState, LoadError, Loading, Notice } from './ui'
@@ -15,6 +16,12 @@ function Field({ name, label, error, children }: { name: string; label: string; 
       {error && <span className="field-error" id={`${name}-error`}>{error}</span>}
     </div>
   )
+}
+
+function decimal(value: FormDataEntryValue | null) {
+  const text = String(value ?? '').trim()
+  if (!text) return null
+  return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(text) ? Number(text) : NaN
 }
 
 function EventForm({ event }: { event?: CampusEvent }) {
@@ -45,10 +52,18 @@ function EventForm({ event }: { event?: CampusEvent }) {
     const endTime = inputToTimestamp(String(values.get('endTime')), event?.endTime)
     const capacityText = String(values.get('capacity')).trim()
     const capacity = capacityText ? Number(capacityText) : null
+    const waitlistEnabled = values.has('waitlistEnabled')
+    const latitude = decimal(values.get('latitude'))
+    const longitude = decimal(values.get('longitude'))
+    const validPin = validLatitude(latitude) && validLongitude(longitude)
     const fields: Record<string, string> = {}
 
     if (!title) fields.title = 'Enter a title.'
     if (!location) fields.location = 'Enter a location.'
+    if ((latitude !== null || longitude !== null) && !validPin) {
+      if (!validLatitude(latitude)) fields.latitude = 'Enter a latitude between −90 and 90.'
+      if (!validLongitude(longitude)) fields.longitude = 'Enter a longitude between −180 and 180.'
+    }
     if (!startTime) fields.startTime = 'Enter a valid local start date and time.'
     if (!endTime) fields.endTime = 'Enter a valid local end date and time.'
     if (startTime && endTime && endTime <= startTime) fields.endTime = 'End time must be after start time.'
@@ -67,15 +82,19 @@ function EventForm({ event }: { event?: CampusEvent }) {
     setErrors({})
     setSummary('')
     try {
-      const fields = { title, description, location, startTime, endTime, capacity, status }
+      const fields = { title, description, location, startTime, endTime, capacity, status, waitlistEnabled }
       const changes = event
         ? Object.fromEntries(Object.entries(fields).filter(([key, value]) => event[key as keyof typeof fields] !== value))
         : fields
-      if (event && Object.keys(changes).length === 0) {
+      const coordinates = validPin ? { latitude, longitude } : null
+      const pinChanged = latitude !== (event?.coordinates?.latitude ?? null)
+        || longitude !== (event?.coordinates?.longitude ?? null)
+      const payload = pinChanged ? { ...changes, coordinates } : changes
+      if (event && Object.keys(payload).length === 0) {
         navigate(back, { replace: true })
         return
       }
-      const saved = await saveEvent(changes, event?.eventId)
+      const saved = await saveEvent(payload, event?.eventId)
       const notice = !event ? 'Event created.'
         : saved.status === 'postponed' && event.status !== 'postponed' ? 'Event postponed.'
         : saved.startTime !== event.startTime || saved.endTime !== event.endTime ? 'Event rescheduled.' : 'Event updated.'
@@ -106,12 +125,36 @@ function EventForm({ event }: { event?: CampusEvent }) {
           </Field>
           <div className="form-grid">
             <Field name="location" label="Location" error={errors.location}>
-              <input {...fieldProps('location')} required maxLength={255} defaultValue={event?.location} />
+              <input {...fieldProps('location')} required maxLength={255} defaultValue={event?.location}
+                placeholder="Venue or street address" />
             </Field>
             <Field name="capacity" label="Participant capacity (optional)" error={errors.capacity}>
               <input {...fieldProps('capacity', 'capacity-hint')} inputMode="numeric" defaultValue={event?.capacity ?? ''} />
               <small id="capacity-hint">Leave blank for no limit.</small>
             </Field>
+          </div>
+          <details className="map-pin-fields" open={!!(event?.coordinates || errors.latitude || errors.longitude || errors.coordinates)}>
+            <summary>Map pin (optional)</summary>
+            <p className="form-hint" id="pin-hint">Use verified decimal coordinates. Changing the location clears an unchanged pin.</p>
+            <div className="form-grid">
+              <Field name="latitude" label="Latitude" error={errors.latitude}>
+                <input {...fieldProps('latitude', 'pin-hint')} inputMode="decimal" defaultValue={event?.coordinates?.latitude ?? ''} />
+              </Field>
+              <Field name="longitude" label="Longitude" error={errors.longitude}>
+                <input {...fieldProps('longitude', 'pin-hint')} inputMode="decimal" defaultValue={event?.coordinates?.longitude ?? ''} />
+              </Field>
+            </div>
+            {errors.coordinates && <p className="field-error">{errors.coordinates}</p>}
+          </details>
+          <div className="waitlist-setting">
+            <label>
+              <input {...fieldProps('waitlistEnabled', 'waitlist-hint')} type="checkbox" defaultChecked={event?.waitlistEnabled} />
+              Allow waitlist enrollment when full
+            </label>
+            <small id="waitlist-hint">{event
+              ? `${event.joinedCount} joined · ${event.waitlistedCount} waitlisted. Closing enrollment keeps existing positions.`
+              : 'Participants join the waitlist in the order they sign up.'}</small>
+            {errors.waitlistEnabled && <span className="field-error" id="waitlistEnabled-error">{errors.waitlistEnabled}</span>}
           </div>
         </fieldset>
         <fieldset disabled={busy}>

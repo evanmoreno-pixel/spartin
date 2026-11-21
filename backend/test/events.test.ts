@@ -40,7 +40,7 @@ describe('Demo sessions and protected endpoints (NFR-02, NFR-07)', () => {
   it('returns only the predefined accounts and uses a server-issued cookie', async () => {
     const accounts = await request(app).get('/api/demo-accounts').expect(200)
     expect(accounts.body.data.map((account: { displayName: string }) => account.displayName))
-      .toEqual(['Organizer 1', 'Organizer 2', 'Participant 1'])
+      .toEqual(['Organizer 1', 'Organizer 2', 'Participant 1', 'Participant 2', 'Participant 3'])
     expect(accounts.body.data[0]).not.toHaveProperty('userId')
     const agent = request.agent(app)
     const signedIn = await agent.post('/api/session').send({ accountKey: 'organizer-1' }).expect(200)
@@ -218,7 +218,8 @@ describe('Input validation and persistence (NFR-01)', () => {
       const detail = await participant.get(added.headers.location).expect(200)
       expect(detail.body.data.location).toBe('New Garden Entrance')
       await participant.get('/api/events/transfer-coffee').expect(404)
-      expect(fileDb.prepare('SELECT count(*) AS total FROM schema_migrations').get()?.total).toBe(2)
+      expect(fileDb.prepare('SELECT version FROM schema_migrations ORDER BY version').all().map(row => row.version))
+        .toEqual([1, 3, 4])
     } finally {
       if (fileDb.isOpen) fileDb.close()
       rmSync(directory, { recursive: true, force: true })

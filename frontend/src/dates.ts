@@ -17,6 +17,7 @@ export function eventTimeLabel(value: string) {
 
 export function eventDateTime(value: string) {
   const date = new Date(value)
+  if (!value || !Number.isFinite(date.getTime())) return 'Time unavailable'
   return `${numeric.format(date).replaceAll('/', '-')} · ${clockWithZone.format(date)}`
 }
 

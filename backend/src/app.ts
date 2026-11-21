@@ -4,8 +4,10 @@ import express, { type ErrorRequestHandler } from 'express'
 import { HttpError } from './api/httpError.js'
 import { createApi } from './api/routes.js'
 import { EventRepository } from './data/eventRepository.js'
+import { ParticipationRepository } from './data/participationRepository.js'
 import { DemoSessions } from './services/demoSessions.js'
 import { EventService } from './services/eventService.js'
+import { ParticipationService } from './services/participationService.js'
 
 export function createApp(db: DatabaseSync, options: { clientDirectory?: string; sessionClock?: () => number } = {}) {
   const app = express()
@@ -14,7 +16,9 @@ export function createApp(db: DatabaseSync, options: { clientDirectory?: string;
     res.set('X-Content-Type-Options', 'nosniff')
     next()
   })
-  app.use('/api', createApi(new DemoSessions(db, options.sessionClock), new EventService(new EventRepository(db))))
+  const events = new EventRepository(db)
+  const participation = new ParticipationService(events, new ParticipationRepository(db))
+  app.use('/api', createApi(new DemoSessions(db, options.sessionClock), new EventService(events, participation), participation))
 
   const { clientDirectory } = options
   if (clientDirectory) {
