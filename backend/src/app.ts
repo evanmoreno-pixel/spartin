@@ -13,6 +13,7 @@ export function createApp(db: DatabaseSync, options: {
   clientDirectory?: string
   sessionClock?: () => number
   demoDirectory?: DemoDirectory
+  allowedOrigins?: ReadonlySet<string>
 } = {}) {
   const app = express()
   app.disable('x-powered-by')
@@ -26,6 +27,7 @@ export function createApp(db: DatabaseSync, options: {
     new DemoSessions(db, options.sessionClock, options.demoDirectory),
     new EventService(events, participation),
     participation,
+    options.allowedOrigins,
   ))
 
   const { clientDirectory } = options

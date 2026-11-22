@@ -4,22 +4,10 @@ import { DemoSessions, sessionCookie, sessionLifetimeMs } from '../services/demo
 import { EventService } from '../services/eventService.js'
 import { ParticipationService } from '../services/participationService.js'
 import { HttpError } from './httpError.js'
+import { requireSameOriginForWrites } from './originPolicy.js'
 
 const cookieOptions: CookieOptions = { httpOnly: true, sameSite: 'strict', path: '/api' }
 const parseJson = json({ limit: '48kb' })
-const readMethods = new Set(['GET', 'HEAD', 'OPTIONS'])
-
-const requireSameOriginForWrites: RequestHandler = (req, _res, next) => {
-  const source = req.get('origin')
-  const site = req.get('sec-fetch-site')
-  if (!readMethods.has(req.method) && (
-    (source && source !== `${req.protocol}://${req.get('host')}`)
-    || site === 'cross-site' || site === 'same-site'
-  )) {
-    throw new HttpError(403, 'ORIGIN_NOT_ALLOWED', 'Open SpartIN directly to perform this action.')
-  }
-  next()
-}
 
 function getToken(req: Request) {
   return /(?:^|;\s*)spartin_demo_session=([\w-]{43})(?:;|$)/.exec(req.get('cookie') ?? '')?.[1]
@@ -42,7 +30,10 @@ function pageNumber(req: Request) {
   return Number(page)
 }
 
-export function createApi(sessions: DemoSessions, events: EventService, participation: ParticipationService) {
+export function createApi(
+  sessions: DemoSessions, events: EventService, participation: ParticipationService,
+  allowedOrigins?: ReadonlySet<string>,
+) {
   const api = Router()
 
   const requireSession: RequestHandler = (req, res, next) => {
@@ -70,7 +61,7 @@ export function createApi(sessions: DemoSessions, events: EventService, particip
     res.set('Cache-Control', 'no-store')
     next()
   })
-  api.use(requireSameOriginForWrites)
+  api.use(requireSameOriginForWrites(allowedOrigins))
 
   api.get('/demo-accounts', (_req, res) => {
     res.json({ data: sessions.accounts() })

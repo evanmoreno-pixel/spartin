@@ -28,9 +28,22 @@ $env:PORT = '3423'
 npm run dev
 ```
 
+### Demo on a trusted local network
+
+On the Windows PC, restart the development server with your exact LAN frontend origin:
+
+```powershell
+$env:SPARTIN_DEV_ORIGINS = 'http://10.0.0.191:5173'
+npm run dev
+```
+
+Open [the LAN demo](http://10.0.0.191:5173) from your phone or PC. Loopback origins for `localhost` and `127.0.0.1` are included automatically at the Vite port. If the PC address or frontend port changes, update the origin and restart. Separate multiple origins with commas. Use exact schemes, hosts, and ports with no paths or wildcards.
+
+Vite listens only on loopback by default and enables LAN listening when this list is configured. Express stays on `127.0.0.1` behind the Vite `/api` proxy. For browser writes, the request host must be approved, a supplied `Origin` must match that host, and same-site cross-origin or cross-site Fetch Metadata is rejected. Empty, opaque (`null`), and malformed origins are rejected. Requests that omit both headers remain supported for non-browser tools and still follow the normal session and role checks.
+
 ## Demo accounts
 
-**Authentication is simulated and unsuitable for production deployment.** The app listens on the local loopback interface. Anyone with access to the demo can choose any of its predefined accounts. The server issues an opaque session cookie and resolves the role from the stored user record on each protected request. Sessions expire after eight hours or when the server restarts.
+**Authentication is simulated and unsuitable for production deployment.** Anyone who can reach the demo can choose any predefined account. Enable LAN access only on a trusted network. The server issues an opaque session cookie and resolves the role from the stored user record on each protected request. Sessions expire after eight hours or when the server restarts.
 
 - **Organizer 1** and **Organizer 2** can manage their own events, set capacity, and enable waitlist enrollment. The event detail view shows the number joined and waitlisted.
 - **Participant 1**, **Participant 2**, and **Participant 3** can use **Discover**, **Browse all**, **Map**, and **My events**. Drag or swipe right to join and left to pass. The focused deck also accepts the right and left arrow keys. Buttons provide the same actions. Use **My events** to review enrollment, see waitlist position, or leave.

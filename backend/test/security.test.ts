@@ -3,6 +3,7 @@ import type { AddressInfo } from 'node:net'
 import request from 'supertest'
 import { createServer } from 'vite'
 import { expect, it, vi } from 'vitest'
+import { developmentOrigins } from '../src/api/originPolicy.js'
 import { createApp } from '../src/app.js'
 import { openDatabase } from '../src/data/database.js'
 
@@ -83,14 +84,16 @@ it('SEC-05 returns generic internal errors and logs no request path or driver de
 
 it('SEC-06 preserves the browser origin through the real Vite development proxy', async () => {
   const db = openDatabase(':memory:')
-  const api = createApp(db).listen(0, '127.0.0.1')
+  const allowedOrigins = new Set<string>()
+  const api = createApp(db, { allowedOrigins }).listen(0, '127.0.0.1')
   await once(api, 'listening')
   vi.stubEnv('PORT', String((api.address() as AddressInfo).port))
   let web: Awaited<ReturnType<typeof createServer>> | undefined
   try {
-    web = await createServer({ logLevel: 'silent', server: { port: 0, watch: null, ws: false } })
+    web = await createServer({ logLevel: 'silent', server: { port: 0, strictPort: false, watch: null, ws: false } })
     await web.listen()
     const origin = `http://127.0.0.1:${(web.httpServer?.address() as AddressInfo).port}`
+    allowedOrigins.add(origin)
     const agent = request.agent(origin)
     const signedIn = await agent.post('/api/session')
       .set('Origin', origin).set('Sec-Fetch-Site', 'same-origin')
@@ -104,4 +107,59 @@ it('SEC-06 preserves the browser origin through the real Vite development proxy'
     await new Promise<void>(resolve => api.close(() => resolve()))
     db.close()
   }
+})
+
+const lanOrigin = 'http://10.0.0.191:5173'
+const demoAccount = { accountKey: 'participant-1' }
+
+it.each(['http://localhost:5173', 'http://127.0.0.1:5173', lanOrigin])(
+  'allows configured same-origin sign-in from %s',
+  async origin => {
+    const db = openDatabase(':memory:')
+    try {
+      const app = createApp(db, { allowedOrigins: developmentOrigins('5173', lanOrigin) })
+      const result = await request(app).post('/api/session')
+        .set('Host', new URL(origin).host).set('Origin', origin).set('Sec-Fetch-Site', 'same-origin')
+        .send(demoAccount).expect(200)
+      expect(result.body.data.userId).toBe('demo-participant-1')
+    } finally { db.close() }
+  },
+)
+
+it.each([
+  { host: '10.0.0.191:5173', origin: lanOrigin, additional: '' },
+  { host: 'demo.example:5173', origin: 'http://demo.example:5173', additional: lanOrigin },
+  { host: 'localhost:5173', origin: lanOrigin, additional: lanOrigin },
+  { host: 'localhost:5173', origin: 'null', additional: lanOrigin },
+  { host: 'localhost:5173', origin: '', additional: lanOrigin },
+  { host: 'localhost:5173', origin: 'http://localhost:5173/login', additional: lanOrigin },
+])('rejects invalid or unapproved browser Origin $origin for Host $host', async ({ host, origin, additional }) => {
+  const db = openDatabase(':memory:')
+  try {
+    const app = createApp(db, { allowedOrigins: developmentOrigins('5173', additional) })
+    const result = await request(app).post('/api/session').set('Host', host).set('Origin', origin)
+      .send(demoAccount).expect(403)
+    expect(result.body.error.code).toBe('ORIGIN_NOT_ALLOWED')
+    expect(result.headers['set-cookie']).toBeUndefined()
+  } finally { db.close() }
+})
+
+it('preserves the originless client policy and checks browser metadata when Origin is absent', async () => {
+  const db = openDatabase(':memory:')
+  try {
+    const app = createApp(db, { allowedOrigins: developmentOrigins('5173', lanOrigin) })
+    await request(app).post('/api/session').send(demoAccount).expect(200)
+    await request(app).post('/api/session').set('Host', '10.0.0.191:5173')
+      .set('Sec-Fetch-Site', 'same-origin').send(demoAccount).expect(200)
+    await request(app).post('/api/session').set('Host', '10.0.0.191:5173')
+      .set('Sec-Fetch-Site', 'same-site').send(demoAccount).expect(403)
+    await request(app).post('/api/session').set('Host', 'demo.example:5173')
+      .set('Sec-Fetch-Site', 'same-origin').send(demoAccount).expect(403)
+  } finally { db.close() }
+})
+
+it('uses the configured Vite port and rejects wildcard origins in configuration', () => {
+  expect(developmentOrigins('5184', `  ${lanOrigin}, http://10.0.0.191:5184 `))
+    .toEqual(new Set(['http://localhost:5184', 'http://127.0.0.1:5184', lanOrigin, 'http://10.0.0.191:5184']))
+  expect(() => developmentOrigins('5173', 'http://*:5173')).toThrow(/exact HTTP/)
 })
