@@ -48,6 +48,19 @@ export function listEvents(organizer: boolean, page: number, signal?: AbortSigna
   return request<EventPage>(`${organizer ? '/organizer/events' : '/events'}?page=${page}`, { signal })
 }
 
+export async function listCalendarEvents(signal: AbortSignal) {
+  const events = new Map<string, CampusEvent>()
+  let page = 1
+  let hasNext: boolean
+  do {
+    const result = await listEvents(false, page, signal)
+    for (const event of result.data) events.set(event.eventId, event)
+    hasNext = result.pagination.hasNext
+    page += 1
+  } while (hasNext)
+  return [...events.values()]
+}
+
 export function listDiscovery(signal: AbortSignal) {
   return request<EventPage>('/events/discovery', { signal })
 }

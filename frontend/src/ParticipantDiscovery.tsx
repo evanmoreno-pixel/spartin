@@ -21,6 +21,7 @@ export function ParticipantLayout() {
       <nav className="event-nav" aria-label="Participant dashboard">
         <NavLink end to="/participant">Discover</NavLink>
         <NavLink to="/participant/browse">Browse all</NavLink>
+        <NavLink to="/participant/calendar">Calendar</NavLink>
         <NavLink to="/participant/map">Map</NavLink>
         <NavLink to="/participant/my-events">My events</NavLink>
       </nav>

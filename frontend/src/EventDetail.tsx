@@ -58,7 +58,8 @@ export function EventDetailPage({ organizer, user }: { organizer: boolean; user:
   const resource = useResource(load, !organizer)
   const [deleting, setDeleting] = useState(false)
   const navigate = useNavigate()
-  const notice = useLocation().state?.notice as string | undefined
+  const { state } = useLocation()
+  const notice = state?.notice as string | undefined
   const event = resource.data
   const participant = user.role === 'participant'
   const home = participant ? '/participant/browse' : '/organizer'
@@ -67,7 +68,9 @@ export function EventDetailPage({ organizer, user }: { organizer: boolean; user:
 
   return (
     <div className="detail-layout">
-      <Link className="back-link" to={home}>{participant ? 'Back to Available events' : 'Back to My events'}</Link>
+      {participant && typeof state?.calendarSearch === 'string'
+        ? <Link className="back-link" to={{ pathname: '/participant/calendar', search: state.calendarSearch }}>Back to Calendar</Link>
+        : <Link className="back-link" to={home}>{participant ? 'Back to Available events' : 'Back to My events'}</Link>}
       {resource.pending && <Loading label="Loading event details…" />}
       {unavailable && (
         <EmptyState title="Event unavailable">

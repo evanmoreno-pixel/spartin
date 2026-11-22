@@ -46,7 +46,15 @@ Vite listens only on loopback by default and enables LAN listening when this lis
 **Authentication is simulated and unsuitable for production deployment.** Anyone who can reach the demo can choose any predefined account. Enable LAN access only on a trusted network. The server issues an opaque session cookie and resolves the role from the stored user record on each protected request. Sessions expire after eight hours or when the server restarts.
 
 - **Organizer 1** and **Organizer 2** can manage their own events, set capacity, and enable waitlist enrollment. The event detail view shows the number joined and waitlisted.
-- **Participant 1**, **Participant 2**, and **Participant 3** can use **Discover**, **Browse all**, **Map**, and **My events**. Drag or swipe right to join and left to pass. The focused deck also accepts the right and left arrow keys. Buttons provide the same actions. Use **My events** to review enrollment, see waitlist position, or leave.
+- **Participant 1**, **Participant 2**, and **Participant 3** can use **Discover**, **Browse all**, **Calendar**, **Map**, and **My events**. Drag or swipe right to join and left to pass. The focused deck also accepts the right and left arrow keys. Buttons provide the same actions. Use **My events** to review enrollment, see waitlist position, or leave.
+
+## Browse the in-app calendar
+
+Sign in as a participant and choose **Calendar**. It opens on the current month. Select a date to see its agenda, or select an event title to open Event Details. **Back to Calendar** restores the selected date and view.
+
+Use **Day**, **Week**, **Month**, or **Year** to change views. The arrows move one period at a time. **Today** returns to the current date in the selected view. Select a month in **Year** or a date heading in **Week** to open that period in more detail.
+
+The calendar shows scheduled events that have yet to end, with times in your local timezone. Use **Refresh events** to see newly published events, schedule changes, or deletions immediately. [Calendar implementation and test results](docs/CALENDAR-IMPLEMENTATION.md)
 
 ## Demonstrate maps, sharing, and calendar
 

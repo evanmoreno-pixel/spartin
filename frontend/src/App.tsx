@@ -8,6 +8,7 @@ import { EventDetailPage } from './EventDetail'
 import { EventEditor } from './EventEditor'
 import { ParticipantMapPage } from './EventLocations'
 import { MyEvents } from './MyEvents'
+import { ParticipantCalendar } from './ParticipantCalendar'
 import { ParticipantDiscovery, ParticipantLayout } from './ParticipantDiscovery'
 import { Brand, LoadError, Loading, Notice } from './ui'
 import { useResource } from './useResource'
@@ -151,6 +152,7 @@ export function App() {
             <Route element={<ParticipantLayout />}>
               <Route index element={<ParticipantDiscovery />} />
               <Route path="browse" element={<EventDashboard organizer={false} />} />
+              <Route path="calendar" element={<ParticipantCalendar />} />
               <Route path="my-events" element={<MyEvents />} />
               <Route path="map" element={<ParticipantMapPage />} />
             </Route>
